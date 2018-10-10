@@ -8,7 +8,7 @@ This work is being done gracefully at [Base12](www.base12.com.br)
 ```bash
 git clone git@github.com:cacarrara/marvin.git
 cd marvin
-make install-dev
+make install
 ```
 
 
