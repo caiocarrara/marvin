@@ -15,7 +15,7 @@ clean-build:
 	@rm -fr *.egg-info
 
 test:
-	pytest -x -v
+	pytest -x -v --cov=marvin
 
 install:
 	pip install -r requirements.txt
