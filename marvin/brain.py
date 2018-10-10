@@ -6,8 +6,7 @@ import socket
 
 from urllib.request import urlopen
 
-import config
-import utils
+from . import config, utils
 
 
 glob_azOld = 0          # used to find diff between old and new AZ

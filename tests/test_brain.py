@@ -1,7 +1,7 @@
 from unittest import mock
 import pytest
 
-from brain import MarvinBrain
+from marvin.brain import MarvinBrain
 
 
 @pytest.fixture
@@ -37,7 +37,7 @@ def test_marvin_url_stepper_property(marvin, test_ip):
     assert marvin.url_stepper == f'{test_ip}/stepper/'
 
 
-@mock.patch('brain.urlopen')
+@mock.patch('marvin.brain.urlopen')
 def test_marvin_do_request(urlopen_mocked, marvin):
     expected_url_call = 'test.com/test'
     marvin._do_request(expected_url_call)

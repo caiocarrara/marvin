@@ -1,6 +1,6 @@
 from urllib.request import urlopen
 
-import config
+from marvin import config
 
 
 def get_iss_tle():
