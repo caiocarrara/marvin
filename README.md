@@ -6,7 +6,7 @@ This work is being done gracefully at [Base12](www.base12.com.br)
 
 ## Installing
 ```bash
-git clone git@github.com:cacarrara/marvin.git
+git clone https://gitlab.com/arthur.dent/marvin.git
 cd marvin
 make install
 ```
