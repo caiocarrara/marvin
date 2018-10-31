@@ -54,6 +54,8 @@ class MarvinBrain:
         self._turn_led(self.LED_STATE_OFF)
 
     def move_servo(self, angle):
+        if angle > 90:
+            angle = 90
         cmd_url = self.url_servo + str(angle)
         self._do_request(cmd_url)
 
