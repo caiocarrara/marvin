@@ -5,16 +5,16 @@ DEBUG = False
 INFO = True
 
 # Your Latitude (+N) deg
-LAT = 33
+LAT = -23.51397
 
 # Your Longitude (+E) deg
-LON = -65
+LON = -47.48727
 
 # Elevation at your location (meters)
 ELV = 600
 
 # IP Address of YOUR ESP8266 AltAZ Pointer
-STEPIP = "http://192.168.0.69/"
+STEPIP = "http://192.168.43.20/"
 
 # Replace with your stepper (steps per one revolution)
 STEPS = 2048
@@ -25,3 +25,5 @@ FLOAT_A = float(STEPS) / 360.0
 HOR = 10.0
 
 TLE = "https://api.wheretheiss.at/v1/satellites/25544/tles?format=text"
+
+ALWAYS_ON = True

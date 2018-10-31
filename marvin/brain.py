@@ -54,10 +54,6 @@ class MarvinBrain:
         self._turn_led(self.LED_STATE_OFF)
 
     def move_servo(self, angle):
-        if angle < 0 and angle != -90:
-            angle = 0
-        elif angle > 90:
-            angle = 90
         cmd_url = self.url_servo + str(angle)
         self._do_request(cmd_url)
 
@@ -157,7 +153,7 @@ if __name__ == '__main__':
             print("Altitude : %s" % altDeg)
 
             # IS ISS VISIBLE NOW
-            if (altDeg > int(config.HOR)):
+            if config.ALWAYS_ON or altDeg > int(config.HOR):
                 if config.INFO:
                     print("ISS IS VISIBLE")
 
