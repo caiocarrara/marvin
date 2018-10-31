@@ -66,18 +66,6 @@ def test_marvin_move_servo(marvin_mocked):
     marvin_mocked._do_request.assert_called_with(marvin_mocked.url_servo + str(angle))
 
 
-def test_marvin_move_servo_lower_than_0(marvin_mocked):
-    angle = -10
-    marvin_mocked.move_servo(angle)
-    marvin_mocked._do_request.assert_called_with(marvin_mocked.url_servo + str(0))
-
-
-def test_marvin_move_servo_lower_than_0_but_90(marvin_mocked):
-    angle = -90
-    marvin_mocked.move_servo(angle)
-    marvin_mocked._do_request.assert_called_with(marvin_mocked.url_servo + str(-90))
-
-
 def test_marvin_move_servo_greater_than_90(marvin_mocked):
     angle = 1000
     marvin_mocked.move_servo(angle)
