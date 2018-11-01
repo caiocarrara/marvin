@@ -85,12 +85,23 @@ class MarvinBrain:
             self.move_servo(-90)
             self.turn_led_off()
 
+def build_site():
+    site = ephem.Observer()
+    site.date = datetime.datetime.utcnow()
+    site.lat = str(config.LAT)
+    site.lon = str(config.LON)
+    site.horizon = str(config.HOR)
+    site.elevation = config.ELV
+    site.pressure = 0
+    return site
+
 
 if __name__ == '__main__':
     # timeout in seconds
     timeout = 10
     socket.setdefaulttimeout(timeout)
     marvin = MarvinBrain(config.STEPIP)
+    site = build_site()
 
     # This is to allow getting the TLE after restarts
     pt = datetime.datetime.utcnow() - datetime.timedelta(hours=1)
@@ -111,13 +122,7 @@ if __name__ == '__main__':
             pt = ct
 
         iss = ephem.readtle(iss_tle[0], iss_tle[1], iss_tle[2])
-        site = ephem.Observer()
         site.date = datetime.datetime.utcnow()
-        site.lat = str(config.LAT)
-        site.lon = str(config.LON)
-        site.horizon = str(config.HOR)
-        site.elevation = config.ELV
-        site.pressure = 0
 
         print("Current UTC time  : %s" % site.date)
         print("Current Local time: %s" % ephem.localtime(site.date))
@@ -142,10 +147,8 @@ if __name__ == '__main__':
         # FIND THE CURRENT LOCATION OF ISS
         iss.compute(site)
         degrees_per_radian = 180.0 / math.pi
-
         altDeg = int(iss.alt * degrees_per_radian)
         azDeg = int(iss.az * degrees_per_radian)
-        iss.compute(ct)
 
         if config.INFO:
             print("CURRENT LOCATION:")
@@ -154,32 +157,32 @@ if __name__ == '__main__':
             print("Azimuth  : %s" % azDeg)
             print("Altitude : %s" % altDeg)
 
-            # IS ISS VISIBLE NOW
-            if config.ALWAYS_ON or altDeg > int(config.HOR):
+        # IS ISS VISIBLE NOW
+        if config.ALWAYS_ON or altDeg > int(config.HOR):
+            if config.INFO:
+                print("ISS IS VISIBLE")
+
+            if (altDeg > int(45)):
                 if config.INFO:
-                    print("ISS IS VISIBLE")
+                    print("ISS IS OVERHEAD")
 
-                if (altDeg > int(45)):
-                    if config.INFO:
-                        print("ISS IS OVERHEAD")
+            next_check = 5
 
-                next_check = 5
+            # Send to AltAz Pointer
+            marvin.turn_led_on()
 
-                # Send to AltAz Pointer
-                marvin.turn_led_on()
+            # Point Servo towards ISS
+            # Convert AZ deg to 200 steps
+            # Find the difference between current location and new location
+            azDiff = azDeg - glob_azOld
+            glob_azOld = azDeg
+            steps = int(float(azDiff) * config.FLOAT_A)
+            marvin.move_stepper(steps)
+            marvin.move_servo(altDeg)
+        else:
+            if config.INFO:
+                print("ISS below horizon")
+            marvin.reset()
+            next_check = 60
 
-                # Point Servo towards ISS
-                # Convert AZ deg to 200 steps
-                # Find the difference between current location and new location
-                azDiff = azDeg - glob_azOld
-                glob_azOld = azDeg
-                steps = int(float(azDiff) * config.FLOAT_A)
-                marvin.move_stepper(steps)
-                marvin.move_servo(altDeg)
-            else:
-                if config.INFO:
-                    print("ISS below horizon")
-                marvin.reset()
-                next_check = 60
-
-            time.sleep(next_check)
+        time.sleep(next_check)
