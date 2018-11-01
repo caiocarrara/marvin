@@ -157,6 +157,21 @@ if __name__ == '__main__':
             print("Azimuth  : %s" % azDeg)
             print("Altitude : %s" % altDeg)
 
+        # Simulates ISS trajectory for the amount of minutes defined in config.py
+        if config.SIMULATE:
+            iss_future = iss.copy()
+            for i in range(0, config.MINUTES):
+                site.date = datetime.datetime.utcnow() + datetime.timedelta(minutes=i)
+                iss_future.compute(site)
+                altDeg = int(iss_future.alt * degrees_per_radian)
+                marvin.move_servo(altDeg)
+
+                azDeg = int(iss_future.az * degrees_per_radian)
+                azDiff = azDeg - glob_azOld
+                glob_azOld = azDeg
+                steps = int(float(azDiff) * config.FLOAT_A)
+                marvin.move_stepper(steps)
+
         # IS ISS VISIBLE NOW
         if config.ALWAYS_ON or altDeg > int(config.HOR):
             if config.INFO:

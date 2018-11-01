@@ -27,3 +27,5 @@ HOR = 10.0
 TLE = "https://api.wheretheiss.at/v1/satellites/25544/tles?format=text"
 
 ALWAYS_ON = True
+SIMULATE = False
+MINUTES = 90
