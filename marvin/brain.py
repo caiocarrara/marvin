@@ -3,6 +3,15 @@ import datetime
 import time
 import math
 import socket
+import signal
+from sys import exit, argv
+
+def handler(a, b):
+    print("\nResetting...")
+    marvin.reset()
+    exit("Exiting.")
+
+signal.signal(signal.SIGINT, handler)
 
 from urllib.request import urlopen
 
@@ -95,8 +104,41 @@ def build_site():
     site.pressure = 0
     return site
 
+def simulate(minutes, iss):
+    """Simulates accelerated ISS trajectory for the next few minutes"""
+    marvin.turn_led_on()
+    azOld = 0
+    for i in range(0, minutes, config.SIMULATION_SPEED):
+        site.date = datetime.datetime.utcnow() + datetime.timedelta(minutes=i)
+        iss.compute(site)
+        altDeg = int(iss.alt * degrees_per_radian)
+        marvin.move_servo(altDeg)
+
+        azDeg = int(iss.az * degrees_per_radian)
+        azDiff = azDeg - azOld
+        azOld = azDeg
+        steps = int(float(azDiff) * config.FLOAT_A)
+        marvin.move_stepper(steps)
+    marvin.reset()
+    exit()
+
+def point_to(body):
+    marvin.reset()
+    marvin.turn_led_on()
+    s = eval(f"ephem.{body}()")
+    s.compute(site)
+    marvin.move_stepper(int(s.az * degrees_per_radian * config.FLOAT_A))
+    marvin.move_servo(int(s.alt * degrees_per_radian))
 
 if __name__ == '__main__':
+
+    if len(argv) == 1:
+        print("s: Quick simulation ")
+        print("p: Point to specific celestial body")
+        print("v: Follow ISS if visible")
+        exit()
+    flag = argv[1]
+
     # timeout in seconds
     timeout = 10
     socket.setdefaulttimeout(timeout)
@@ -157,47 +199,36 @@ if __name__ == '__main__':
             print("Azimuth  : %s" % azDeg)
             print("Altitude : %s" % altDeg)
 
-        # Simulates ISS trajectory for the amount of minutes defined in config.py
-        if config.SIMULATE:
-            iss_future = iss.copy()
-            for i in range(0, config.MINUTES):
-                site.date = datetime.datetime.utcnow() + datetime.timedelta(minutes=i)
-                iss_future.compute(site)
-                altDeg = int(iss_future.alt * degrees_per_radian)
-                marvin.move_servo(altDeg)
+        if flag == "s":
+            simulate(int(input("How many minutes? ")), iss)
+        if flag == "p":
+            point_to(input("Choose a planet: "))
+        if flag == "v":
+            # IS ISS VISIBLE NOW
+            if config.XRAY_VISION or altDeg > int(config.HOR):
+                if config.INFO:
+                    print("ISS IS VISIBLE")
 
-                azDeg = int(iss_future.az * degrees_per_radian)
+                if (altDeg > int(45)):
+                    if config.INFO:
+                        print("ISS IS OVERHEAD")
+
+                next_check = 5
+
+                # Send to AltAz Pointer
+                marvin.turn_led_on()
+
+                # Point Servo towards ISS
+                # Convert AZ deg to 200 steps
+                # Find the difference between current location and new location
                 azDiff = azDeg - glob_azOld
                 glob_azOld = azDeg
                 steps = int(float(azDiff) * config.FLOAT_A)
                 marvin.move_stepper(steps)
-
-        # IS ISS VISIBLE NOW
-        if config.ALWAYS_ON or altDeg > int(config.HOR):
-            if config.INFO:
-                print("ISS IS VISIBLE")
-
-            if (altDeg > int(45)):
+                marvin.move_servo(altDeg)
+            else:
                 if config.INFO:
-                    print("ISS IS OVERHEAD")
-
-            next_check = 5
-
-            # Send to AltAz Pointer
-            marvin.turn_led_on()
-
-            # Point Servo towards ISS
-            # Convert AZ deg to 200 steps
-            # Find the difference between current location and new location
-            azDiff = azDeg - glob_azOld
-            glob_azOld = azDeg
-            steps = int(float(azDiff) * config.FLOAT_A)
-            marvin.move_stepper(steps)
-            marvin.move_servo(altDeg)
-        else:
-            if config.INFO:
-                print("ISS below horizon")
-            marvin.reset()
-            next_check = 60
-
-        time.sleep(next_check)
+                    print("ISS below horizon")
+                marvin.reset()
+                next_check = 60
+            time.sleep(next_check)

@@ -2,7 +2,7 @@
 DEBUG = False
 
 # Display ephemeris info
-INFO = True
+INFO = False
 
 # Your Latitude (+N) deg
 LAT = -23.51397
@@ -26,6 +26,5 @@ HOR = 10.0
 
 TLE = "https://api.wheretheiss.at/v1/satellites/25544/tles?format=text"
 
-ALWAYS_ON = True
-SIMULATE = False
-MINUTES = 90
+XRAY_VISION = True
+SIMULATION_SPEED = 1
