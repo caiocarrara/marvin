@@ -17,10 +17,6 @@ from urllib.request import urlopen
 
 from marvin import config, utils
 
-
-glob_azOld = 0          # used to find diff between old and new AZ
-
-
 class MarvinBrain:
     LED_STATE_ON = 'on'
     LED_STATE_OFF = 'off'
@@ -87,12 +83,115 @@ class MarvinBrain:
         self.all_steps += steps
 
     def reset(self):
-        if self.all_steps != 0:
-            steps_to_reset = self.all_steps * -1
-            self.move_stepper(steps_to_reset)
-            self.all_steps = 0
-            self.move_servo(-90)
-            self.turn_led_off()
+        self.move_servo(-90)
+        steps_to_reset = self.all_steps * -1
+        self.move_stepper(steps_to_reset)
+        self.all_steps = 0
+        self.turn_led_off()
+
+OPTIONS = """
+s: Simulates the next few minutes of the ISS trajectory
+p: Point to specific celestial body
+f: Follow ISS if visible
+n: Print time of next ISS flyover
+"""
+
+def simulate(minutes, iss):
+    """Simulates the next few minutes of the ISS trajectory"""
+    marvin.turn_led_on()
+    azOld = 0
+    for i in range(0, minutes, config.SIMULATION_SPEED):
+        site.date = datetime.datetime.utcnow() + datetime.timedelta(minutes=i)
+        iss.compute(site)
+
+        azDeg = deg(iss.az)
+        steps = int((azDeg - azOld) * config.STEPS_PER_DEGREE)
+        azOld = azDeg
+        marvin.move_stepper(steps)
+
+        altDeg = deg(iss.alt)
+        marvin.move_servo(altDeg)
+    marvin.reset()
+
+def iss_next_pass(iss):
+    tr, azr, tt, altt, ts, azs = site.next_pass(iss)
+
+    if (ts > tr):
+        duration = int((ts - tr) * 60 * 60 * 24)
+
+    print("Next Pass (Localtime): %s" % ephem.localtime(tr))
+    if config.INFO:
+        print("UTC Rise Time   : %s" % tr)
+        print("UTC Max Alt Time: %s" % tt)
+        print("UTC Set Time    : %s" % ts)
+        print("Rise Azimuth: %s" % azr)
+        print("Set Azimuth : %s" % azs)
+        print("Max Altitude: %s" % altt)
+        print("Duration    : %s" % duration)
+
+def point_to(body):
+    marvin.turn_led_on()
+    s = eval(f"ephem.{body}()")
+    s.compute(site)
+    marvin.move_stepper(int(deg(s.az) * config.STEPS_PER_DEGREE))
+    marvin.move_servo(int(deg(s.alt)))
+    body = input("Choose another celestial body or \"q\" to quit: ")
+    if body == "q":
+        marvin.reset()
+    else:
+        marvin.reset()
+        point_to(body)
+
+def follow_iss(iss, iss_tle):
+    marvin.turn_led_on()
+    azOld = 0
+    last_update = datetime.datetime.utcnow()
+    while True:
+        # Get TLE Info only every 20 minutes
+        if should_update(last_update):
+            iss_tle = utils.get_iss_tle()
+            last_update = datetime.datetime.utcnow()
+        iss = find_iss(iss_tle)
+        altDeg = deg(iss.alt)
+        if config.XRAY_VISION or altDeg > int(config.HOR):
+            if config.INFO:
+                if altDeg > int(45):
+                    print("ISS IS OVERHEAD")
+                else:
+                    print("ISS IS VISIBLE")
+
+            azDeg = deg(iss.az)
+            steps = int((azDeg - azOld) * config.STEPS_PER_DEGREE)
+            azOld = azDeg
+            marvin.move_stepper(steps)
+            marvin.move_servo(altDeg)
+            time.sleep(5)
+        else:
+            if config.INFO:
+                print("ISS below horizon")
+            marvin.reset()
+            time.sleep(60)
+
+def should_update(last_update):
+    time_since_update = (datetime.datetime.utcnow() - last_update).total_seconds()
+    return time_since_update > (20 * 60)
+
+def find_iss(iss_tle):
+    iss = ephem.readtle(iss_tle[0], iss_tle[1], iss_tle[2])
+    site.date = datetime.datetime.utcnow()
+    iss.compute(site)
+    return iss
+
+def body_info(body):
+    print("CURRENT LOCATION:")
+    print("Latitude : %s" % body.sublat)
+    print("Longitude: %s" % body.sublong)
+    print("Azimuth  : %s" % int(deg(body.alt)))
+    print("Altitude : %s" % int(deg(body.az)))
+
+def deg(radians):
+    """Converts radians to degrees"""
+    return radians * 180.0 / math.pi
 
 def build_site():
     site = ephem.Observer()
@@ -104,131 +203,27 @@ def build_site():
     site.pressure = 0
     return site
 
-def simulate(minutes, iss):
-    """Simulates accelerated ISS trajectory for the next few minutes"""
-    marvin.turn_led_on()
-    azOld = 0
-    for i in range(0, minutes, config.SIMULATION_SPEED):
-        site.date = datetime.datetime.utcnow() + datetime.timedelta(minutes=i)
-        iss.compute(site)
-        altDeg = int(iss.alt * degrees_per_radian)
-        marvin.move_servo(altDeg)
-
-        azDeg = int(iss.az * degrees_per_radian)
-        azDiff = azDeg - azOld
-        azOld = azDeg
-        steps = int(float(azDiff) * config.FLOAT_A)
-        marvin.move_stepper(steps)
-    marvin.reset()
-    exit()
-
-def point_to(body):
-    marvin.reset()
-    marvin.turn_led_on()
-    s = eval(f"ephem.{body}()")
-    s.compute(site)
-    marvin.move_stepper(int(s.az * degrees_per_radian * config.FLOAT_A))
-    marvin.move_servo(int(s.alt * degrees_per_radian))
-
 if __name__ == '__main__':
-
     if len(argv) == 1:
-        print("s: Quick simulation ")
-        print("p: Point to specific celestial body")
-        print("v: Follow ISS if visible")
-        exit()
+        exit(OPTIONS)
     flag = argv[1]
 
-    # timeout in seconds
-    timeout = 10
-    socket.setdefaulttimeout(timeout)
+    socket.setdefaulttimeout(10) # In seconds
     marvin = MarvinBrain(config.STEPIP)
     site = build_site()
+    iss_tle = utils.get_iss_tle()
+    iss = find_iss(iss_tle)
 
-    # This is to allow getting the TLE after restarts
-    pt = datetime.datetime.utcnow() - datetime.timedelta(hours=1)
-    duration = 0        # Duration of a flyover in seconds
+    print("Current UTC time  : %s" % site.date)
+    print("Current Local time: %s" % ephem.localtime(site.date))
 
-    while True:
-        print("\n")
-        print("ISS PASS INFO")
-
-        # Get TLE Info only every 20 minutes
-        # just left math for clarity, not speed
-        ct = datetime.datetime.utcnow()
-        next_seconds = int((ct - pt).total_seconds())
-        if config.DEBUG:
-            print("Seconds since last TLE check: %s" % next_seconds)
-        if (next_seconds > (20 * 60)):
-            iss_tle = utils.get_iss_tle()
-            pt = ct
-
-        iss = ephem.readtle(iss_tle[0], iss_tle[1], iss_tle[2])
-        site.date = datetime.datetime.utcnow()
-
-        print("Current UTC time  : %s" % site.date)
-        print("Current Local time: %s" % ephem.localtime(site.date))
-
-        # FIND NEXT PASS INFO JUST FOR REFERENCE
-        tr, azr, tt, altt, ts, azs = site.next_pass(iss)
-
-        if (ts > tr):
-            duration = int((ts - tr) * 60 * 60 * 24)
-
-        print("Next Pass (Localtime): %s" % ephem.localtime(tr))
-
-        if config.INFO:
-            print("UTC Rise Time   : %s" % tr)
-            print("UTC Max Alt Time: %s" % tt)
-            print("UTC Set Time    : %s" % ts)
-            print("Rise Azimuth: %s" % azr)
-            print("Set Azimuth : %s" % azs)
-            print("Max Altitude: %s" % altt)
-            print("Duration    : %s" % duration)
-
-        # FIND THE CURRENT LOCATION OF ISS
-        iss.compute(site)
-        degrees_per_radian = 180.0 / math.pi
-        altDeg = int(iss.alt * degrees_per_radian)
-        azDeg = int(iss.az * degrees_per_radian)
-
-        if config.INFO:
-            print("CURRENT LOCATION:")
-            print("Latitude : %s" % iss.sublat)
-            print("Longitude: %s" % iss.sublong)
-            print("Azimuth  : %s" % azDeg)
-            print("Altitude : %s" % altDeg)
-
-        if flag == "s":
-            simulate(int(input("How many minutes? ")), iss)
-        if flag == "p":
-            point_to(input("Choose a planet: "))
-        if flag == "v":
-            # IS ISS VISIBLE NOW
-            if config.XRAY_VISION or altDeg > int(config.HOR):
-                if config.INFO:
-                    print("ISS IS VISIBLE")
-
-                if (altDeg > int(45)):
-                    if config.INFO:
-                        print("ISS IS OVERHEAD")
-
-                next_check = 5
-
-                # Send to AltAz Pointer
-                marvin.turn_led_on()
-
-                # Point Servo towards ISS
-                # Convert AZ deg to 200 steps
-                # Find the difference between current location and new location
-                azDiff = azDeg - glob_azOld
-                glob_azOld = azDeg
-                steps = int(float(azDiff) * config.FLOAT_A)
-                marvin.move_stepper(steps)
-                marvin.move_servo(altDeg)
-            else:
-                if config.INFO:
-                    print("ISS below horizon")
-                marvin.reset()
-                next_check = 60
-            time.sleep(next_check)
+    if flag == "s":
+        simulate(int(input("How many minutes? ")), iss)
+    elif flag == "p":
+        point_to(input("Choose a celestial body: "))
+    elif flag == "f":
+        follow_iss(iss, iss_tle)
+    elif flag == "n":
+        iss_next_pass(iss)
+    else:
+        exit(OPTIONS)

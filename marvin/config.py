@@ -1,4 +1,3 @@
-# 0 off 1 on
 DEBUG = False
 
 # Display ephemeris info
@@ -19,12 +18,17 @@ STEPIP = "http://192.168.43.20/"
 # Replace with your stepper (steps per one revolution)
 STEPS = 2048
 
-FLOAT_A = float(STEPS) / 360.0
+STEPS_PER_DEGREE = STEPS / 360.0
 
 # Default to 10 degrees above horizon before being "visible"
 HOR = 10.0
 
+# A two-line element set (TLE) is a data format encoding a list of
+# orbital elements of an Earth-orbiting object for a given point in time
 TLE = "https://api.wheretheiss.at/v1/satellites/25544/tles?format=text"
 
+# Point to ISS when following it, even if it wouldn't be visible
 XRAY_VISION = True
-SIMULATION_SPEED = 1
+
+# Step size in minutes. Increase for long trajectory simulations
+SIMULATION_SPEED = 10
