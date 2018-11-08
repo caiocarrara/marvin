@@ -41,11 +41,10 @@
 #include <ESP8266WiFi.h> steps > STEPS
 #include <Stepper.h>
 #include <Servo.h>
-// #include "Stepper_28BYJ_48.h"
 
 // -- USER EDIT -- 
-const char* ssid     = "Base 12";  // YOUR WIFI SSID
-const char* password = "viescognitivo";  // YOUR WIFI PASSWORD
+const char* ssid     = "SSID";  // YOUR WIFI SSID
+const char* password = "PASS";  // YOUR WIFI PASSWORD
 
 // change this to your motor if not NEMA-17 200 step
 #define STEPS 2048  // Max steps for one revolution
@@ -53,11 +52,11 @@ const char* password = "viescognitivo";  // YOUR WIFI PASSWORD
 #define DELAY 5    // Delay to allow Wifi to work
 // -- END USER EDIT --
 
-int SRVL = D6;    // Pino D6 para Servo Control esquerdo
-int SRVR = D7;    // Pino D7 para Servo Control direito
-// int STBY = D0;     // Pino D0 TB6612 Standby
-int LEDIN = 0;    // GPIO 0 (built-in LED)
-int LEDEX = D5;    // D5 External LED
+int LEFT_SERVO_PIN = D6;    // Pino D6 para Servo Control esquerdo
+int RIGHT_SERVO_PIN = D7;   // Pino D7 para Servo Control direito
+int LEDIN = 0;      // GPIO 0 (built-in LED)
+int LEDGREEN = D5;  // D5 External LED GREEN
+int LEDRED = D8;    // D8 External LED RED
 
 // GPIO Pins for Motor Driver board
 Stepper stepper(STEPS, D1, D3, D2, D4);
@@ -79,16 +78,13 @@ void setup() {
   digitalWrite(LEDIN, HIGH);
 
   // prepare external LED
-  pinMode(LEDEX, OUTPUT);
-  digitalWrite(LEDEX, LOW);
-
-  // prepare STBY GPIO and set Stepper motors
-//  pinMode(STBY, OUTPUT);
-//  digitalWrite(STBY, HIGH);
+  pinMode(LEDGREEN, OUTPUT);
+  digitalWrite(LEDGREEN, LOW);
+  pinMode(LEDRED, OUTPUT);
+  digitalWrite(LEDRED, LOW);
   
   // Set default speed to Max (doesn't move motor)
   stepper.setSpeed(RPM);
-
 
   // Connect to WiFi network
   Serial.println();
@@ -119,9 +115,9 @@ void setup() {
   blink();
 
   // prepare Servo GPIO
-  servoLeft.attach(SRVL);
+  servoLeft.attach(LEFT_SERVO_PIN);
   servoLeft.write(180);
-  servoRight.attach(SRVR);
+  servoRight.attach(RIGHT_SERVO_PIN);
   servoRight.write(0);
 }
 
@@ -146,16 +142,22 @@ void loop() {
   client.flush();
 
   // CONTROL LED
-  if (req.indexOf("/led/off") != -1) {
-    digitalWrite(LEDEX, LOW);
-    respMsg = "OK: LED OFF";
+  if (req.indexOf("/led/green/off") != -1) {
+    digitalWrite(LEDGREEN, LOW);
+    respMsg = "OK: Green LED OFF";
   } 
-  else if (req.indexOf("/led/on") != -1) {
-    digitalWrite(LEDEX, HIGH);
-    respMsg = "OK: LED ON";
+  else if (req.indexOf("/led/green/on") != -1) {
+    digitalWrite(LEDGREEN, HIGH);
+    respMsg = "OK: Green LED ON";
   }
-
-
+  else if (req.indexOf("/led/red/off") != -1) {
+    digitalWrite(LEDRED, LOW);
+    respMsg = "OK: Red LED OFF";
+  }
+  else if (req.indexOf("/led/red/on") != -1) {
+    digitalWrite(LEDRED, HIGH);
+    respMsg = "OK: Red LED ON";
+  }
   
   // CONTROL SERVO 
   else if (req.indexOf("/servoL/value") != -1) {
@@ -177,21 +179,8 @@ void loop() {
         respMsg = "OK: ALTITUDE = "+String(az);
       }
     }
-
-
-
   
   // CONTROL STEPPER
- /* else if (req.indexOf("/stepper/stop") != -1) {
-    digitalWrite(STBY, LOW);
-    respMsg = "OK: MOTORS OFF";
-  } 
-  else if (req.indexOf("/stepper/start") != -1) {
-    digitalWrite(STBY, HIGH);
-    blink();
-    respMsg = "OK: MOTORS ON";
-  } 
-  */
   else if (req.indexOf("/stepper/rpm") != -1) {
     int rpm = getValue(req);
     if ((rpm < 1) || (rpm > RPM)) {
@@ -206,21 +195,18 @@ void loop() {
     int steps = getValue(req);
     if ((steps == 0) || (steps < 0 - STEPS) || ( steps > STEPS )) {
       respMsg = "ERROR: steps out of range ";
-    } else {  
-//      digitalWrite(STBY, HIGH);       // Make sure motor is on
-//      respMsg = "OK: STEPS = "+String(steps);
-//      delay(DELAY); 
-      if ( steps > 0) { // Forward
+    }
+    else if ( steps > 0) { // Forward
         for (int i=0;i<steps;i++) {   // This loop is needed to allow Wifi to not be blocked by step
           stepper.step(1);
-          delay(DELAY);   
+          delay(DELAY);
         }
-      } else {         // Reverse
+    }
+    else {         // Reverse
           for (int i=0;i>steps;i--) {   // This loop is needed to allow Wifi to not be blocked by step
             stepper.step(-1);
             delay(DELAY); 
           }  
-      }
     }
   }
   else {
@@ -274,8 +260,10 @@ String printUsage() {
   s += "http://{ip_address}/servo/value?[0 to 90]\n";
   s += "\n";
   s += "LED usage:\n";
-  s += "http://{ip_address}/led/on\n";
-  s += "http://{ip_address}/led/off\n"; 
+  s += "http://{ip_address}/led/green/on\n";
+  s += "http://{ip_address}/led/green/off\n";
+  s += "http://{ip_address}/led/red/on\n";
+  s += "http://{ip_address}/led/red/off\n";
   return(s);
 }
 void blink() {
