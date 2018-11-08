@@ -85,14 +85,6 @@ class MarvinBrain:
         self.turn_led_off()
 
 
-OPTIONS = """
-s: Simulates the next few minutes of the ISS trajectory
-p: Point to specific celestial body
-f: Follow ISS if visible
-n: Print time of next ISS flyover
-"""
-
-
 def simulate(minutes, iss):
     """Simulates the next few minutes of the ISS trajectory"""
     marvin.led("green", "on")
@@ -207,6 +199,14 @@ def build_site():
     site.elevation = config.ELV
     site.pressure = 0
     return site
+
+
+OPTIONS = """
+s: Simulates the next few minutes of the ISS trajectory
+p: Point to specific celestial body
+f: Follow ISS if visible
+n: Print time of next ISS flyover
+"""
 
 
 if __name__ == '__main__':
