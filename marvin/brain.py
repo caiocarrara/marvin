@@ -5,17 +5,18 @@ import math
 import socket
 import signal
 from sys import exit, argv
+from urllib.request import urlopen
+from marvin import config, utils
+
 
 def handler(a, b):
     print("\nResetting...")
     marvin.reset()
     exit("Exiting.")
 
+
 signal.signal(signal.SIGINT, handler)
 
-from urllib.request import urlopen
-
-from marvin import config, utils
 
 class MarvinBrain:
     LED_STATE_ON = 'on'
@@ -89,12 +90,14 @@ class MarvinBrain:
         self.all_steps = 0
         self.turn_led_off()
 
+
 OPTIONS = """
 s: Simulates the next few minutes of the ISS trajectory
 p: Point to specific celestial body
 f: Follow ISS if visible
 n: Print time of next ISS flyover
 """
+
 
 def simulate(minutes, iss):
     """Simulates the next few minutes of the ISS trajectory"""
@@ -113,6 +116,7 @@ def simulate(minutes, iss):
         marvin.move_servo(altDeg)
     marvin.reset()
 
+
 def iss_next_pass(iss):
     tr, azr, tt, altt, ts, azs = site.next_pass(iss)
 
@@ -129,6 +133,7 @@ def iss_next_pass(iss):
         print("Max Altitude: %s" % altt)
         print("Duration    : %s" % duration)
 
+
 def point_to(body):
     marvin.turn_led_on()
     s = eval(f"ephem.{body}()")
@@ -141,6 +146,7 @@ def point_to(body):
     else:
         marvin.reset()
         point_to(body)
+
 
 def follow_iss(iss, iss_tle):
     marvin.turn_led_on()
@@ -172,15 +178,18 @@ def follow_iss(iss, iss_tle):
             marvin.reset()
             time.sleep(60)
 
+
 def should_update(last_update):
     time_since_update = (datetime.datetime.utcnow() - last_update).total_seconds()
     return time_since_update > (20 * 60)
+
 
 def find_iss(iss_tle):
     iss = ephem.readtle(iss_tle[0], iss_tle[1], iss_tle[2])
     site.date = datetime.datetime.utcnow()
     iss.compute(site)
     return iss
+
 
 def body_info(body):
     print("CURRENT LOCATION:")
@@ -189,9 +198,11 @@ def body_info(body):
     print("Azimuth  : %s" % int(deg(body.alt)))
     print("Altitude : %s" % int(deg(body.az)))
 
+
 def deg(radians):
     """Converts radians to degrees"""
     return radians * 180.0 / math.pi
+
 
 def build_site():
     site = ephem.Observer()
@@ -203,12 +214,13 @@ def build_site():
     site.pressure = 0
     return site
 
+
 if __name__ == '__main__':
     if len(argv) == 1:
         exit(OPTIONS)
     flag = argv[1]
 
-    socket.setdefaulttimeout(10) # In seconds
+    socket.setdefaulttimeout(10)  # In seconds
     marvin = MarvinBrain(config.STEPIP)
     site = build_site()
     iss_tle = utils.get_iss_tle()
