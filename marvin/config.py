@@ -13,7 +13,7 @@ LON = -47.48727
 ELV = 600
 
 # IP Address of YOUR ESP8266 AltAZ Pointer
-STEPIP = "http://192.168.43.20/"
+STEPIP = "192.168.0.69"
 
 # Replace with your stepper (steps per one revolution)
 STEPS = 2048

@@ -28,15 +28,15 @@ class MarvinBrain:
 
     @property
     def url_led(self):
-        return '{}/led/'.format(self._ip)
+        return 'http://{}/led/'.format(self._ip)
 
     @property
     def url_servo(self):
-        return '{}/servoR/value?'.format(self._ip)
+        return 'http://{}/servoR/value?'.format(self._ip)
 
     @property
     def url_stepper(self):
-        return '{}/stepper/'.format(self._ip)
+        return 'http://{}/stepper/'.format(self._ip)
 
     def _do_request(self, cmd_url):
         try:
@@ -49,15 +49,9 @@ class MarvinBrain:
         except Exception:
             print("ERROR: comm failure")
 
-    def _turn_led(self, state):
-        cmd_url = self.url_led + state
+    def led(self, color, state):
+        cmd_url = self.url_led + color + "/" + state
         self._do_request(cmd_url)
-
-    def turn_led_on(self):
-        self._turn_led(self.LED_STATE_ON)
-
-    def turn_led_off(self):
-        self._turn_led(self.LED_STATE_OFF)
 
     def move_servo(self, angle):
         if angle > 90:
@@ -101,7 +95,7 @@ n: Print time of next ISS flyover
 
 def simulate(minutes, iss):
     """Simulates the next few minutes of the ISS trajectory"""
-    marvin.turn_led_on()
+    marvin.led("green", "on")
     azOld = 0
     for i in range(0, minutes, config.SIMULATION_SPEED):
         site.date = datetime.datetime.utcnow() + datetime.timedelta(minutes=i)
@@ -135,7 +129,7 @@ def iss_next_pass(iss):
 
 
 def point_to(body):
-    marvin.turn_led_on()
+    marvin.led("green", "on")
     s = eval(f"ephem.{body}()")
     s.compute(site)
     marvin.move_stepper(int(deg(s.az) * config.STEPS_PER_DEGREE))
@@ -149,7 +143,7 @@ def point_to(body):
 
 
 def follow_iss(iss, iss_tle):
-    marvin.turn_led_on()
+    marvin.led("green", "on")
     azOld = 0
     last_update = datetime.datetime.utcnow()
     while True:
