@@ -26,15 +26,15 @@ def test_marvin_init_attributes(marvin, test_ip):
 
 
 def test_marvin_url_led_property(marvin, test_ip):
-    assert marvin.url_led == f'{test_ip}/led/'
+    assert marvin.url_led == f'http://{test_ip}/led/'
 
 
 def test_marvin_url_servo_property(marvin, test_ip):
-    assert marvin.url_servo == f'{test_ip}/servoR/value?'
+    assert marvin.url_servo == f'http://{test_ip}/servoR/value?'
 
 
 def test_marvin_url_stepper_property(marvin, test_ip):
-    assert marvin.url_stepper == f'{test_ip}/stepper/'
+    assert marvin.url_stepper == f'http://{test_ip}/stepper/'
 
 
 @mock.patch('marvin.brain.urlopen')
@@ -45,19 +45,27 @@ def test_marvin_do_request(urlopen_mocked, marvin):
 
 
 def test_marvin_turn_led(marvin_mocked):
-    state = 'stateON'
-    marvin_mocked._turn_led(state)
-    marvin_mocked._do_request.assert_called_with(marvin_mocked.url_led + state)
+    state = MarvinBrain.LED_STATE_ON
+    color = 'green'
+    marvin_mocked._turn_led(color, state)
+    expected_url = '{}{}/{}'.format(marvin_mocked.url_led, color, state)
+    marvin_mocked._do_request.assert_called_with(expected_url)
 
 
 def test_marvin_turn_led_on(marvin_mocked):
+    state = MarvinBrain.LED_STATE_ON
+    color = 'green'
+    expected_url = '{}{}/{}'.format(marvin_mocked.url_led, color, state)
     marvin_mocked.turn_led_on()
-    marvin_mocked._do_request.assert_called_with(marvin_mocked.url_led + MarvinBrain.LED_STATE_ON)
+    marvin_mocked._do_request.assert_called_with(expected_url)
 
 
 def test_marvin_turn_led_off(marvin_mocked):
+    state = MarvinBrain.LED_STATE_OFF
+    color = 'green'
+    expected_url = '{}{}/{}'.format(marvin_mocked.url_led, color, state)
     marvin_mocked.turn_led_off()
-    marvin_mocked._do_request.assert_called_with(marvin_mocked.url_led + MarvinBrain.LED_STATE_OFF)
+    marvin_mocked._do_request.assert_called_with(expected_url)
 
 
 def test_marvin_move_servo(marvin_mocked):

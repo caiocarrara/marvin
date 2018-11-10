@@ -49,9 +49,15 @@ class MarvinBrain:
         except Exception:
             print("ERROR: comm failure")
 
-    def led(self, color, state):
-        cmd_url = self.url_led + color + "/" + state
+    def _turn_led(self, color, state):
+        cmd_url = '{}{}/{}'.format(self.url_led, color, state)
         self._do_request(cmd_url)
+
+    def turn_led_on(self, color='green'):
+        self._turn_led(color, self.LED_STATE_ON)
+
+    def turn_led_off(self, color='green'):
+        self._turn_led(color, self.LED_STATE_OFF)
 
     def move_servo(self, angle):
         if angle > 90:
@@ -87,7 +93,7 @@ class MarvinBrain:
 
 def simulate(minutes, iss):
     """Simulates the next few minutes of the ISS trajectory"""
-    marvin.led("green", "on")
+    marvin.turn_led_on()
     azOld = 0
     for i in range(0, minutes, config.SIMULATION_SPEED):
         site.date = datetime.datetime.utcnow() + datetime.timedelta(minutes=i)
@@ -121,8 +127,13 @@ def iss_next_pass(iss):
 
 
 def point_to(body):
-    marvin.led("green", "on")
-    s = eval(f"ephem.{body}()")
+    marvin.turn_led_on()
+
+    if not hasattr(ephem, body):
+        marvin.reset()
+        return
+
+    s = getattr(ephem, body)()
     s.compute(site)
     marvin.move_stepper(int(deg(s.az) * config.STEPS_PER_DEGREE))
     marvin.move_servo(int(deg(s.alt)))
@@ -135,7 +146,7 @@ def point_to(body):
 
 
 def follow_iss(iss, iss_tle):
-    marvin.led("green", "on")
+    marvin.turn_led_on()
     azOld = 0
     last_update = datetime.datetime.utcnow()
     while True:
